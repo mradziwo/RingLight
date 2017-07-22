@@ -40,3 +40,7 @@ HDLC frame containing "ABCD":
       
 ### NeoPixel
 https://github.com/adafruit/Adafruit_NeoPixel
+
+##Arduino
+Remove reset on DTR!
+https://playground.arduino.cc/Main/DisablingAutoResetOnSerialConnection
