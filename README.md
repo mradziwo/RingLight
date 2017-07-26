@@ -16,6 +16,11 @@ data[1] = brighntess
 data[1] = hue
 data[2] = intensity
 
+### COMMAND_PIXEL = 0x06
+data[1]  - ID
+data[2] - r
+data[3] -g
+data[4] -b
 hue is wrapped from classic 0-360  to 0-255 values
 intensity is 0-255
 
@@ -37,7 +42,8 @@ HDLC frame containing "ABCD":
 			[6]	210 / 210	char
 			[7]	126 '~'	char
       
-      
+ http://reveng.sourceforge.net/crc-catalogue/16.htm
+ http://ww1.microchip.com/downloads/en/AppNotes/00752a.pdf
 ### NeoPixel
 https://github.com/adafruit/Adafruit_NeoPixel
 
