@@ -41,21 +41,25 @@ void send_character(uint8_t data) {
 
 
 
-enum serial_commands {
+typedef enum serial_commands {
     COMMAND_ERROR = 0, // 0
     COMMAND_ECHO,
     COMMAND_READ_SIGNATURE,
     COMMAND_DEMO,
     COMMAND_WHITE_LEVEL,
     COMMAND_COLOR_LEVEL,
-};
-enum serial_responses {
+    COMMAND_SET_SINGLE_PIXEL,
+} commands;
+typedef enum serial_responses {
     RESPONSE_ERROR = 0, // 0
+    RESPONSE_OK,
     RESPONSE_VERSION,
     RESPONSE_BUTTON_PRESS,
     RESPONSE_READ_SIGNATURE,
     RESPONSE_ECHO_DATA,
-};
+    RESPONSE_PIXEL_ID_OUT_OF_RANGE,
+    RESPONSE_RGB_PARAMETER_OUT_OF_RANGE
+} responses;
 
 int delayval = 500; // delay for half a second
 
@@ -63,15 +67,21 @@ int delayval = 500; // delay for half a second
 void hdlc_command_router(const uint8_t *framebuffer, uint16_t framelength) {
     
     enum serial_commands command = static_cast<serial_commands>(framebuffer[0]);
-    
+  Serial.println(framelength);
+  Serial.println(framebuffer[0]);
+  Serial.println(framebuffer[1]);
+  Serial.println(framebuffer[2]);
+  Serial.println(framebuffer[3]);
+  Serial.println(framebuffer[4]);
     switch(command)
     {
-        case COMMAND_ERROR: command_error(); break;
-        case COMMAND_ECHO: command_echo_data(framebuffer, framelength); break;                               //0x7E 0x01 0x00 0x06 0x1F 0x7E 
-        case COMMAND_READ_SIGNATURE:         command_read_signature(framebuffer, framelength); break;
-        case COMMAND_DEMO: command_demo(framebuffer, framelength); break;                                    //0x7e 0x03 0x1C 0x3D 0x7E 
-        case COMMAND_WHITE_LEVEL: command_white_level(framebuffer, framelength); break;                      // 0x7E 0x04 0x00 0x83 0x4d 0x7E | 0x7E 0x04 0x7F 0xBB 0xFA 0x7E| 0x7E 0x04 0xFF 0x46 0x80 0x7E
-        case COMMAND_COLOR_LEVEL: command_color_level(framebuffer, framelength); break;
+        case COMMAND_ERROR:             reply_error(RESPONSE_ERROR); break;
+        case COMMAND_ECHO:              command_echo_data(framebuffer, framelength); break;                               //0x7E 0x01 0x00 0x06 0x1F 0x7E 
+        case COMMAND_READ_SIGNATURE:    command_read_signature(framebuffer, framelength); break;
+        case COMMAND_DEMO:              command_demo(framebuffer, framelength); break;                                    //0x7e 0x03 0x1C 0x3D 0x7E 
+        case COMMAND_WHITE_LEVEL:       command_white_level(framebuffer, framelength); break;                      // 0x7E 0x04 0x00 0x83 0x4d 0x7E | 0x7E 0x04 0x7F 0xBB 0xFA 0x7E| 0x7E 0x04 0xFF 0x46 0x80 0x7E
+        case COMMAND_COLOR_LEVEL:       command_color_level(framebuffer, framelength); break;
+        case COMMAND_SET_SINGLE_PIXEL:  command_set_single_pixel(framebuffer, framelength); break;
         default:
         command_default();
         break;
@@ -84,8 +94,8 @@ void command_echo_data(const uint8_t *framebuffer, uint16_t framelength) {
     hdlc.frameDecode((const char*)framebuffer, framelength);
 }
 
-void command_error(void) {
-    char data[2] = {(uint8_t)RESPONSE_ERROR, 1};
+void reply_error(const uint8_t error) {
+    char data[2] = {(uint8_t)error, 1};
     //data[0] = RESPONSE_ERROR;
     hdlc.frameDecode(data, 2);
 }
@@ -101,7 +111,7 @@ void command_read_signature(const uint8_t *framebuffer, uint16_t framelengthd) {
 }
 
 void command_default(void) {
-    char data[2] = {(uint8_t)RESPONSE_ERROR, 2};
+    char data[2] = {(char)RESPONSE_ERROR, 2};
     //data[0] = RESPONSE_ERROR;
     hdlc.frameDecode(data, 2);
 }
@@ -206,7 +216,21 @@ void command_color_level(const uint8_t *framebuffer, uint16_t framelength) {
   pixels.show();
 }
 
+void command_set_single_pixel(const uint8_t *framebuffer, uint16_t framelength) {
 
+  if (framebuffer[1]>=NUMPIXELS)
+  {
+    reply_error(RESPONSE_PIXEL_ID_OUT_OF_RANGE);
+    return;
+  }
+  if ((framebuffer[2]>255)||(framebuffer[3]>255)||(framebuffer[4]>255))
+  {
+    reply_error(RESPONSE_RGB_PARAMETER_OUT_OF_RANGE);
+    return;
+  }
+  pixels.setPixelColor(framebuffer[1], pixels.Color(framebuffer[2],framebuffer[3],framebuffer[4]));
+  pixels.show();
+}
 
 void setup() {
   // This is for Trinket 5V 16MHz, you can remove these three lines if you are not using a Trinket
